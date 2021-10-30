@@ -40,13 +40,13 @@ function Get-IntuneClientLogCollection {
     [cmdletbinding()]
     param(
         [string]
-        $OutputDirectory = "c:\Temp\IntuneClientLogs",
+        $OutputDirectory = "c:\IntuneClientLogs",
 
         [string]
-        $TempDirectory = "c:\Temp\IntuneClientLogs\Temp",
+        $TempDirectory = "c:\IntuneClientLogs\Temp",
 
         [string]
-        $LogFile = "C:\Temp\IntuneClientLogs\CollectionTranscript.txt",
+        $LogFile = "C:\IntuneClientLogs\CollectionTranscript.txt",
 
         [switch]
         $Logging
@@ -139,6 +139,32 @@ function Get-IntuneClientLogCollection {
                     return
                 }
             }
+
+            # Compress all needed archives in to one archive
+            try {
+                Write-Verbose "Compressing entire collection into $($OutputDirectory)\IntuneLogCollection.zip"
+                $compressionCollection = @{
+                    Path = "$OutputDirectory\DeviceManagementEventLogs.zip", "$OutputDirectory\IntuneManagementExtensionLogs.zip", "$OutputDirectory\RegistryLogs.zip"
+                    CompressionLevel = "Fastest"
+                    DestinationPath = "$OutputDirectory\IntuneLogCollection.zip"
+                }
+                Compress-Archive @compressionCollection -Update
+            }
+            catch {
+                Write-Output "$_.Exception.Message"
+                return
+            }
+
+            # Cleanup
+            try {
+                Write-Verbose "Starting cleanup. Removing $TempDirectory and all temp items"
+                Remove-Item -Path $TempDirectory -Force -Recurse
+                Remove-Item -Path $OutputDirectory\Registry.txt -Force
+                Get-ChildItem -Path $OutputDirectory | foreach-object { 
+                    if ($_.Name -ne "IntuneLogCollection.zip") { Remove-Item $_ -Force }
+                }
+            }
+            catch { Write-Output "$_.Exception.Message" }
         }
         catch {
             Write-Output "$_.Exception.Message"
@@ -147,14 +173,7 @@ function Get-IntuneClientLogCollection {
     }
 
     end {
-        # Cleanup
-        try {
-            Write-Verbose "Starting cleanup. Removing $TempDirectory and all temp items"
-            Remove-Item -Path $TempDirectory -Force -Recurse
-            Remove-Item -Path $OutputDirectory\*.csv -Force
-            Remove-Item -Path $OutputDirectory\Registry.txt -Force
-        }
-        catch { Write-Output "$_.Exception.Message" }
+        
 
         if ($Logging.IsPresent) { Stop-Transcript }
         $ErrorActionPreference = $ErrorActionPreferenceOld
