@@ -78,6 +78,9 @@ function Get-IntuneClientLogCollection {
             }
         }
 
+        # Set the location so we can remove the files
+        Set-Location $OutputDirectory
+
         try {
             $inTuneDirectories = @( @("C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\*", "IntuneManagementExtensionLogs.zip"),
                 @("C:\Program files (x86)\Microsoft Intune Management Extension\Policies\Scripts\*", "IntuneScriptLogs.zip"),
@@ -159,9 +162,13 @@ function Get-IntuneClientLogCollection {
             try {
                 Write-Verbose "Starting cleanup. Removing $TempDirectory and all temp items"
                 Remove-Item -Path $TempDirectory -Force -Recurse
+                Write-Verbose "Removing $OutputDirectory\Registry.txt"
                 Remove-Item -Path $OutputDirectory\Registry.txt -Force
                 Get-ChildItem -Path $OutputDirectory | foreach-object { 
-                    if ($_.Name -ne "IntuneLogCollection.zip") { Remove-Item $_ -Force }
+                    if ($_.Name -ne "IntuneLogCollection.zip") { 
+                        Remove-Item $_ -Force
+                        Write-Verbose "Removing $_"
+                    }
                 }
             }
             catch { Write-Output "$_.Exception.Message" }
