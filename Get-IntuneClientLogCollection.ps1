@@ -15,7 +15,7 @@ function Get-IntuneClientLogCollection {
         .PARAMETER LogFile
             Output logging file
 
-        .PARAMETER Logging
+        .PARAMETER EnableLogging
             Enable logging
 
         .EXAMPLE
@@ -24,14 +24,19 @@ function Get-IntuneClientLogCollection {
             Will collect all of the Intune client side logs, event logs, registry information and compress them to a zip file
 
         .EXAMPLE
-            Get-IntuneClientLogCollection -Logging
+            Get-IntuneClientLogCollection -EnableLogging
 
             Will collect all of the Intune client side logs, event logs, registry information and compress them to a zip file for review as well as save logging of the script execution
 
         .EXAMPLE
-            Get-IntuneClientLogCollection -LogFile "<DriveLetter>:\YourSaveLocation"
+            Get-IntuneClientLogCollection -Verbose
 
-            Will enable script execution logging
+            Will run the script with verbose logging
+
+        .EXAMPLE
+            Get-IntuneClientLogCollection -LogFile "<DriveLetter>:\YourSaveLocation" -EnableLogging
+
+            Will enable script execution logging and save to "<DriveLetter>:\YourSaveLocation"
 
         .NOTES
             None
@@ -49,14 +54,14 @@ function Get-IntuneClientLogCollection {
         $LogFile = "C:\IntuneClientLogs\CollectionTranscript.txt",
 
         [switch]
-        $Logging
+        $EnableLogging
     )
 
     begin {
         Write-Verbose "Saving `$ErrorActionPreference which is current set to $ErrorActionPreference and changing to Stop"
         $ErrorActionPreferenceOld = $ErrorActionPreference
         $ErrorActionPreference = "Stop"
-        if ($Logging.IsPresent) { Start-Transcript -Path $LogFile }
+        if ($EnableLogging.IsPresent) { Start-Transcript -Path $LogFile }
         Write-Output "Starting data collection"
     }
 
@@ -160,18 +165,21 @@ function Get-IntuneClientLogCollection {
 
             # Cleanup
             try {
-                Write-Verbose "Starting cleanup. Removing $TempDirectory and all temp items"
-                Remove-Item -Path $TempDirectory -Force -Recurse
-                Write-Verbose "Removing $OutputDirectory\Registry.txt"
-                Remove-Item -Path $OutputDirectory\Registry.txt -Force
-                Get-ChildItem -Path $OutputDirectory | foreach-object { 
-                    if ($_.Name -ne "IntuneLogCollection.zip") { 
+                Write-Verbose "Starting cleanup."
+                Remove-Item -Path $TempDirectory -Force -Recurse -ErrorAction Stop
+                Write-Verbose "Removed $($TempDirectory) and all temp items"
+                Remove-Item -Path $OutputDirectory\Registry.txt -Force -ErrorAction Stop
+                Write-Verbose "Removed $OutputDirectory\Registry.txt"
+                Get-ChildItem -Path $OutputDirectory -ErrorAction Stop | Foreach-Object {
+                    if ($_.Name -ne 'IntuneLogCollection.zip' -and $_.Name -ne 'CollectionTranscript.txt') {
                         Remove-Item $_ -Force
-                        Write-Verbose "Removing $_"
+                        Write-Verbose "Removed $_"
                     }
                 }
             }
-            catch { Write-Output "$_.Exception.Message" }
+            catch {
+                Write-Output "$_.Exception.Message"
+            }
         }
         catch {
             Write-Output "$_.Exception.Message"
@@ -180,9 +188,7 @@ function Get-IntuneClientLogCollection {
     }
 
     end {
-        
-
-        if ($Logging.IsPresent) { Stop-Transcript }
+        if ($EnableLogging.IsPresent) { Stop-Transcript }
         $ErrorActionPreference = $ErrorActionPreferenceOld
         Write-Verbose "Restored `$ErrorActionPreference back to $ErrorActionPreference"
         Write-Output "Data collection completed!"
