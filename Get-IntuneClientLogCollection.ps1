@@ -1,4 +1,4 @@
-function Get-IntuneClientLogCollection {
+﻿function Get-IntuneClientLogCollection {
     <#
         .SYNOPSIS
             Collect all Intune client side logs
@@ -39,7 +39,7 @@ function Get-IntuneClientLogCollection {
             Will enable script execution logging and save to "<DriveLetter>:\YourSaveLocation"
 
         .NOTES
-            None
+            $PSStyle code is for fix: https://github.com/PowerShell/PowerShell/pull/16811. Will be removed when backport is approved.
     #>
 
     [cmdletbinding()]
@@ -58,6 +58,7 @@ function Get-IntuneClientLogCollection {
     )
 
     begin {
+        $PSStyle.OutputRendering = 'Host'
         if ($EnableLogging.IsPresent) { Start-Transcript -Path $LogFile }
         $currentWinPrincipal = New-Object System.Security.Principal.WindowsPrincipal([System.Security.Principal.WindowsIdentity]::GetCurrent())
         if (-NOT ($CurrentWinPrincipal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator))) {
@@ -186,6 +187,7 @@ function Get-IntuneClientLogCollection {
 
     end {
         if ($EnableLogging.IsPresent) { Stop-Transcript }
+        $PSStyle.OutputRendering = 'Ansi'
         Write-Output "Data collection completed!"
     }
 }
