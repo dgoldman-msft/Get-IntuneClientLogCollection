@@ -53,9 +53,6 @@ function Get-IntuneClientLogCollection {
     )
 
     begin {
-        Write-Verbose "Saving `$ErrorActionPreference which is current set to $ErrorActionPreference and changing to Stop"
-        $ErrorActionPreferenceOld = $ErrorActionPreference
-        $ErrorActionPreference = "Stop"
         if ($Logging.IsPresent) { Start-Transcript -Path $LogFile }
         Write-Output "Starting data collection"
     }
@@ -69,7 +66,7 @@ function Get-IntuneClientLogCollection {
                     $null = New-Item -Path $directory -ItemType Directory
                 }
                 catch {
-                    $_.Exception.Message
+                    $_
                     return
                 }
             }
@@ -78,10 +75,9 @@ function Get-IntuneClientLogCollection {
             }
         }
 
-        # Set the location so we can remove the files
-        Set-Location $OutputDirectory
-
         try {
+            # Set the location so we can remove the files
+            Set-Location $OutputDirectory
             $inTuneDirectories = @( @("C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\*", "IntuneManagementExtensionLogs.zip"),
                 @("C:\Program files (x86)\Microsoft Intune Management Extension\Policies\Scripts\*", "IntuneScriptLogs.zip"),
                 @("C:\Program files (x86)\Microsoft Intune Management Extension\Policies\Results\*", "IntuneScriptResultLogs.zip")
@@ -95,7 +91,7 @@ function Get-IntuneClientLogCollection {
                 Write-Verbose -Message "Compressing Windows Device Management Registry Information to $OutputDirectory\Registry.zip"
             }
             catch {
-                Write-Output "$_.Exception.Message"
+                Write-Output "$_"
                 return
             }
 
@@ -108,7 +104,7 @@ function Get-IntuneClientLogCollection {
                 Write-Verbose -Message "Compressing Windows Device Management Event Logs to $OutputDirectory\DeviceManagementEventLogs.zip"
             }
             catch {
-                Write-Output "$_.Exception.Message"
+                Write-Output "$_"
                 return
             }
 
@@ -138,7 +134,7 @@ function Get-IntuneClientLogCollection {
                     }
                 }
                 catch {
-                    Write-Output "$_.Exception.Message"
+                    Write-Output "$_"
                     return
                 }
             }
@@ -147,14 +143,14 @@ function Get-IntuneClientLogCollection {
             try {
                 Write-Verbose "Compressing entire collection into $($OutputDirectory)\IntuneLogCollection.zip"
                 $compressionCollection = @{
-                    Path = "$OutputDirectory\DeviceManagementEventLogs.zip", "$OutputDirectory\IntuneManagementExtensionLogs.zip", "$OutputDirectory\RegistryLogs.zip"
+                    Path             = "$OutputDirectory\DeviceManagementEventLogs.zip", "$OutputDirectory\IntuneManagementExtensionLogs.zip", "$OutputDirectory\RegistryLogs.zip"
                     CompressionLevel = "Fastest"
-                    DestinationPath = "$OutputDirectory\IntuneLogCollection.zip"
+                    DestinationPath  = "$OutputDirectory\IntuneLogCollection.zip"
                 }
                 Compress-Archive @compressionCollection -Update
             }
             catch {
-                Write-Output "$_.Exception.Message"
+                Write-Output "$_"
                 return
             }
 
@@ -171,10 +167,10 @@ function Get-IntuneClientLogCollection {
                     }
                 }
             }
-            catch { Write-Output "$_.Exception.Message" }
+            catch { Write-Output "$_" }
         }
         catch {
-            Write-Output "$_.Exception.Message"
+            Write-Output "$_"
             return
         }
     }
@@ -183,8 +179,6 @@ function Get-IntuneClientLogCollection {
         
 
         if ($Logging.IsPresent) { Stop-Transcript }
-        $ErrorActionPreference = $ErrorActionPreferenceOld
-        Write-Verbose "Restored `$ErrorActionPreference back to $ErrorActionPreference"
         Write-Output "Data collection completed!"
     }
 }
